@@ -1,5 +1,7 @@
-import {tasks,speeches} from './content.js';
+import {tasks,speeches,modules} from './content.js';
 import {validateGrade} from './grading.js';
+import {Results,studentName,quizRecord} from './results.js';
+export {Results};
 
 const score={type:'integer',minimum:0,maximum:15};
 const str={type:'string'};
@@ -18,16 +20,21 @@ export async function handle(request,env,fetcher=fetch){
  if(origin===allowed&&allowed){headers['Access-Control-Allow-Origin']=allowed;headers['Access-Control-Allow-Methods']='POST, OPTIONS';headers['Access-Control-Allow-Headers']='Content-Type, Authorization';}
  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
  if(!allowed||origin!==allowed)return respond({error:'Diese Website ist nicht für den Korrekturdienst freigeschaltet.'},403);
- if(new URL(request.url).pathname!=='/grade')return respond({error:'Nicht gefunden.'},404);
+ const path=new URL(request.url).pathname;
+ if(!['/grade','/quiz-result','/teacher/results'].includes(path))return respond({error:'Nicht gefunden.'},404);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(request.method!=='POST')return respond({error:'Nur Textabgaben sind erlaubt.'},405);
- if(!env.OPENAI_API_KEY||!env.OPENAI_MODEL||!env.ACCESS_CODES||!env.QUOTA)return respond({error:'Der Korrekturdienst ist noch nicht eingerichtet.'},503);
+ if(path==='/teacher/results'){const token=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!env.TEACHER_SECRET||token!==env.TEACHER_SECRET)return respond({error:'Lehrkraftzugang ungültig.'},401);if(!env.RESULTS)return respond({error:'Ergebnisspeicherung noch nicht eingerichtet.'},503);const r=await env.RESULTS.get(env.RESULTS.idFromName('class')).fetch('https://results/list');return respond(await r.json());}
+ if(!env.OPENAI_API_KEY||!env.OPENAI_MODEL||!env.ACCESS_CODES||!env.QUOTA||!env.RESULTS)return respond({error:'Der Korrekturdienst ist noch nicht eingerichtet.'},503);
  const code=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');
  // Codes are server-side secrets, never sent to OpenAI or stored in the site.
  const codes=env.ACCESS_CODES.split(',').map(x=>x.trim()).filter(x=>x.length>=16);
  if(!codes.includes(code))return respond({error:'Der Übungscode ist ungültig. Bitte frage deine Lehrkraft.'},401);
  if(!request.headers.get('Content-Type')?.includes('application/json'))return respond({error:'Ungültiges Datenformat.'},415);
  let body;try{body=JSON.parse(await limitedBody(request,40000));}catch{return respond({error:'Der Text ist zu groß oder konnte nicht gelesen werden.'},400);}
+ const name=studentName(body.name);if(!name)return respond({error:'Bitte deinen Namen mit 2 bis 80 Zeichen eingeben.'},400);
+ const codeLabel='Zugang '+String(codes.indexOf(code)+1).padStart(2,'0');
+ if(path==='/quiz-result'){const row=quizRecord(body,modules);if(!row)return respond({error:'Ungültiges Quizergebnis.'},400);const r=await env.RESULTS.get(env.RESULTS.idFromName('class')).fetch('https://results/record',{method:'POST',body:JSON.stringify({...row,id:codeLabel+'-'+body.attemptId,date:new Date().toISOString(),codeLabel})});return r.ok?respond({saved:true}):respond({error:'Das Ergebnis konnte nicht gespeichert werden. Bitte später erneut versuchen.'},503);}
  const task=tasks.find(t=>t.id===body.taskId);
  if(!task||typeof body.text!=='string'||body.text.length>16000||body.text.trim().split(/\s+/u).length<15)return respond({error:'Bitte eine gültige Aufgabe und einen Text mit 15 bis etwa 2.500 Wörtern einreichen.'},400);
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(code));
@@ -42,8 +49,10 @@ export async function handle(request,env,fetcher=fetch){
   const grade=validateGrade(JSON.parse(text));
   // Never display invented error quotations as the student's own words.
   grade.corrections=grade.corrections.filter(c=>c.original.length>0&&body.text.includes(c.original));
+  const date=new Date().toISOString();const record={id:crypto.randomUUID(),date,name,codeLabel,kind:'writing',taskId:task.id,words:body.text.trim().split(/\s+/u).length,...grade.scores,verification:'KI-Korrektur'};
+  let centralSaved=false;try{const saved=await env.RESULTS.get(env.RESULTS.idFromName('class')).fetch('https://results/record',{method:'POST',body:JSON.stringify(record)});centralSaved=saved.ok;}catch{}
   delete grade.scores;
-  return respond(grade);
+  return respond({...grade,date,centralSaved});
  }catch{return respond({error:'Die Korrektur ist fehlgeschlagen oder hat zu lange gedauert. Dein Entwurf bleibt erhalten; es wurde keine Note vergeben.'},502);}
 }
 export default {fetch(request,env){return handle(request,env);}};

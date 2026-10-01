@@ -53,3 +53,7 @@ API-Format: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/g
 ## Lokal prüfen
 
 `python3 -m http.server 8765` und `http://127.0.0.1:8765` öffnen. `npm test` prüft Bewertung, Inhaltskonsistenz, Authentifizierung, Anfragegrenzen, Fehlerbehandlung und Quota. API-Tests verwenden simulierte Antworten; sie ersetzen keine echten Qualitätsprüfungen des Modells. GitHub Pages: Branch `main`, Ordner `/ (root)`.
+
+## Zentrale Ergebnisübersicht
+Neu: separate Durable-Object-Bindung `RESULTS` und Migration v2. `TEACHER_SECRET` als zufälliges langes Secret speichern. Lehrkraftansicht: `teacher.html`, CSV-Export mit UTF-8 BOM und Semikolon (Excel). Der Lehrkraftschlüssel bleibt nur im Arbeitsspeicher der geöffneten Seite.
+Gespeichert werden selbst eingegebener Name, Zugangsnummer (kein Rohcode), Datum und Ergebnisdaten. Schreibpunkte stammen ausschließlich aus der serverseitigen Korrektur; Quizpunkte sind Browserübermittlungen und ausdrücklich als solche gekennzeichnet. Keine Identitätsprüfung. Kein rückwirkender Import. Schülertexte und ausführliche Rückmeldungen bleiben lokal. Speicherung 90 Tage, danach automatischer täglicher Löschlauf. Exportdateien separat aufbewahren/löschen. Namen werden nicht an OpenAI gesendet. Neue Schreibkorrekturen benötigen einen Namen und die angepasste Übermittlungsbestätigung. Quizübermittlung ist eine ausdrückliche Aktion nach Abschluss der Runde.

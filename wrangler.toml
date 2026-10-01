@@ -16,3 +16,11 @@ new_sqlite_classes = ["Quota"]
 
 # Add OPENAI_API_KEY and ACCESS_CODES through Cloudflare Secrets, never here.
 # ACCESS_CODES: comma-separated random codes, at least 16 characters each.
+
+[[durable_objects.bindings]]
+name = "RESULTS"
+class_name = "Results"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Results"]
