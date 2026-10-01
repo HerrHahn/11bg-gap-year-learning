@@ -10,7 +10,7 @@ export class Results {
   if(path!=='/record')return new Response(null,{status:404});
   const row=await request.json();if(!row.id||!row.date||!studentName(row.name))return new Response(null,{status:400});
   const status=await this.state.storage.transaction(async tx=>{const key='result:'+row.id;if(await tx.get(key))return 200;const day=row.date.slice(0,10),keyCount='count:'+day;const count=(await tx.get(keyCount))||0;if(count>=1000)return 429;await tx.put(key,row);await tx.put(keyCount,count+1);return 201;});
-  await this.state.storage.setAlarm(Date.now()+24*60*60*1000);return new Response(null,{status});
+  if(await this.state.storage.getAlarm()===null)await this.state.storage.setAlarm(Date.now()+24*60*60*1000);return new Response(null,{status});
  }
  async alarm(){const rows=await this.state.storage.list();const cutoff=Date.now()-RETENTION_MS;const keys=[...rows].filter(([k,v])=>k.startsWith('result:')?Date.parse(v.date)<cutoff:k.startsWith('count:')&&Date.parse(k.slice(6))<cutoff).map(([k])=>k);for(let i=0;i<keys.length;i+=100)await this.state.storage.delete(keys.slice(i,i+100));if(rows.size>keys.length)await this.state.storage.setAlarm(Date.now()+24*60*60*1000);}
 }
