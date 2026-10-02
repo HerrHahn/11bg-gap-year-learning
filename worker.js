@@ -26,9 +26,10 @@ export async function handle(request,env,fetcher=fetch){
  if(request.method!=='POST')return respond({error:'Nur Textabgaben sind erlaubt.'},405);
  if(path==='/teacher/results'){const token=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!env.TEACHER_SECRET||token!==env.TEACHER_SECRET)return respond({error:'Lehrkraftzugang ungültig.'},401);if(!env.RESULTS)return respond({error:'Ergebnisspeicherung noch nicht eingerichtet.'},503);const r=await env.RESULTS.get(env.RESULTS.idFromName('class')).fetch('https://results/list');return respond(await r.json());}
  if(!env.OPENAI_API_KEY||!env.OPENAI_MODEL||!env.ACCESS_CODES||!env.QUOTA||!env.RESULTS)return respond({error:'Der Korrekturdienst ist noch nicht eingerichtet.'},503);
- const code=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');
+ const submittedCode=(request.headers.get('Authorization')||'').replace(/^Bearer /,'').trim();
+ const code=submittedCode.length===6?submittedCode.toUpperCase():submittedCode;
  // Codes are server-side secrets, never sent to OpenAI or stored in the site.
- const codes=env.ACCESS_CODES.split(',').map(x=>x.trim()).filter(x=>x.length>=16);
+ const codes=env.ACCESS_CODES.split(',').map(x=>x.trim()).filter(x=>/^[A-Z2-9]{6}$/.test(x)||x.length>=16);
  if(!codes.includes(code))return respond({error:'Der Übungscode ist ungültig. Bitte frage deine Lehrkraft.'},401);
  if(!request.headers.get('Content-Type')?.includes('application/json'))return respond({error:'Ungültiges Datenformat.'},415);
  let body;try{body=JSON.parse(await limitedBody(request,40000));}catch{return respond({error:'Der Text ist zu groß oder konnte nicht gelesen werden.'},400);}

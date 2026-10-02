@@ -23,7 +23,7 @@ Salbeigrüne Lernwebsite zur Englischklausur am **22.10.2026**: Gap Years, Point
 1. Einen OpenAI-API-Zugang mit nutzbarem Kontingent und einen Cloudflare-Account bereitstellen. Es wurden keine kostenpflichtigen Verträge abgeschlossen und keine echten API-Korrekturen durchgeführt.
 2. Im Projektverzeichnis `npx wrangler deploy` ausführen. `wrangler.toml` legt eine SQLite Durable Object Quota an. Den Modellnamen auf ein im eigenen API-Projekt verfügbares Modell einstellen; aktuell ist `gpt-4.1-mini` konfiguriert.
 3. `npx wrangler secret put OPENAI_API_KEY`: API-Schlüssel ausschließlich in die geschützte Eingabe schreiben.
-4. Pro Lernendem einen zufälligen, nicht personenbezogenen Code mit mindestens 16 Zeichen erzeugen. Die kommagetrennte Liste über `npx wrangler secret put ACCESS_CODES` hinterlegen. Codes separat an Lernende verteilen, niemals in GitHub committen.
+4. Pro Lernendem einen zufälligen, nicht personenbezogenen Code mit sechs Zeichen (Großbuchstaben und Ziffern) erzeugen. Die kommagetrennte Liste über `npx wrangler secret put ACCESS_CODES` hinterlegen. Codes separat an Lernende verteilen, niemals in GitHub committen.
 5. `ALLOWED_ORIGIN` ist für `https://herrhahn.github.io` vorbereitet. CORS ersetzt keine Authentifizierung; zusätzlich werden die Codes serverseitig geprüft.
 6. Die bestätigte Worker-URL mit `/grade` in `config.js` als `GRADING_ENDPOINT` eintragen und die Website erneut veröffentlichen.
 7. Vor Klasseneinsatz echte fachliche Probebewertungen durchführen: gute, mittlere, schwache, unpassende und manipulative Texte; Ergebnis anhand der Raster kontrollieren. Automatische Bewertungen bleiben unverbindliche Lernrückmeldungen.
