@@ -1,3 +1,4 @@
+import {handleBritain} from './britain-feedback.mjs';
 import {tasks,speeches,modules} from './content.js';
 import {validateGrade} from './grading.js';
 import {Results,studentName,quizRecord} from './results.js';
@@ -15,6 +16,7 @@ Give 1–3 specific strengths (or explicitly say no assessable strength), 2–3 
 
 async function limitedBody(req,max){const reader=req.body?.getReader();if(!reader)throw new Error('empty');let size=0;const chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>max){await reader.cancel();throw new Error('large');}chunks.push(value);}const result=new Uint8Array(size);let off=0;for(const chunk of chunks){result.set(chunk,off);off+=chunk.byteLength;}return new TextDecoder().decode(result);}
 export async function handle(request,env,fetcher=fetch){
+ if(new URL(request.url).pathname==='/britain/grade')return handleBritain(request,env,fetcher);
  const origin=request.headers.get('Origin');const allowed=env.ALLOWED_ORIGIN;
  const headers={'Content-Type':'application/json;charset=utf-8','Cache-Control':'no-store','Vary':'Origin','X-Content-Type-Options':'nosniff'};
  if(origin===allowed&&allowed){headers['Access-Control-Allow-Origin']=allowed;headers['Access-Control-Allow-Methods']='POST, OPTIONS';headers['Access-Control-Allow-Headers']='Content-Type, Authorization';}
