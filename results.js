@@ -1,3 +1,4 @@
+import {butlerSuggestionStorage} from './butler-suggestions.mjs';
 import {suggestionStorage} from './suggestions.mjs';
 import {quizPoints} from './grading.js';
 export const RETENTION_MS=90*24*60*60*1000;
@@ -7,6 +8,7 @@ export function quizRecord(body,modules){const name=studentName(body.name);if(!n
 export class Results {
  constructor(state){this.state=state;}
  async fetch(request){const path=new URL(request.url).pathname;
+  if(path.startsWith('/butler-suggestions/'))return butlerSuggestionStorage(request,this.state);
   if(path.startsWith('/suggestions/'))return suggestionStorage(request,this.state);
   if(path==='/list'){const records=await this.state.storage.list({prefix:'result:'});return Response.json({rows:[...records.values()].filter(r=>Date.now()-Date.parse(r.date)<RETENTION_MS).sort((a,b)=>b.date.localeCompare(a.date))});}
   if(path!=='/record')return new Response(null,{status:404});
