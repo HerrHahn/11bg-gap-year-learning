@@ -26,10 +26,11 @@ export async function handleBritain(request,env,fetcher=fetch){
  Object.assign(headers,{'Access-Control-Allow-Origin':env.ALLOWED_ORIGIN,'Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'});
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(request.method!=='POST')return respond({error:'Nur Textabgaben sind erlaubt.'},405);
- if(!env.ACCESS_CODES||!env.OPENAI_API_KEY||!env.OPENAI_MODEL||!env.QUOTA)return respond({error:'Die KI-Korrektur ist noch nicht freigeschaltet.'},503);
+ const accessCodes=[env.ACCESS_CODES,env.BRITAIN_ACCESS_CODES].filter(Boolean).join(',');
+ if(!accessCodes||!env.OPENAI_API_KEY||!env.OPENAI_MODEL||!env.QUOTA)return respond({error:'Die KI-Korrektur ist noch nicht freigeschaltet.'},503);
  const submittedCode=(request.headers.get('Authorization')||'').replace(/^Bearer /,'').trim();
  const code=submittedCode.length===6?submittedCode.toUpperCase():submittedCode;
- if(!env.ACCESS_CODES.split(',').map(x=>x.trim()).filter(x=>/^[A-Z2-9]{6}$/.test(x)||x.length>=16).includes(code))return respond({error:'Der Übungscode ist ungültig. Bitte frage deine Lehrkraft.'},401);
+ if(!accessCodes.split(',').map(x=>x.trim()).filter(x=>/^[A-Z2-9]{6}$/.test(x)||x.length>=16).includes(code))return respond({error:'Der Übungscode ist ungültig. Bitte frage deine Lehrkraft.'},401);
  if(!request.headers.get('Content-Type')?.includes('application/json'))return respond({error:'Ungültiges Datenformat.'},415);
  let body;try{body=JSON.parse(await bodyText(request));}catch{return respond({error:'Der Text konnte nicht gelesen werden oder ist zu groß.'},400);}
  const task=tasks.find(x=>x.id===body?.taskId);
