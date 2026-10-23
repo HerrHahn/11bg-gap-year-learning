@@ -1,3 +1,4 @@
+import {suggestionStorage} from './suggestions.mjs';
 import {quizPoints} from './grading.js';
 export const RETENTION_MS=90*24*60*60*1000;
 export function studentName(value){if(typeof value!=='string')return '';const n=value.trim().replace(/\s+/gu,' ');return n.length>=2&&n.length<=80&&!/[\u0000-\u001f\u007f]/u.test(n)?n:'';}
@@ -6,6 +7,7 @@ export function quizRecord(body,modules){const name=studentName(body.name);if(!n
 export class Results {
  constructor(state){this.state=state;}
  async fetch(request){const path=new URL(request.url).pathname;
+  if(path.startsWith('/suggestions/'))return suggestionStorage(request,this.state);
   if(path==='/list'){const records=await this.state.storage.list({prefix:'result:'});return Response.json({rows:[...records.values()].filter(r=>Date.now()-Date.parse(r.date)<RETENTION_MS).sort((a,b)=>b.date.localeCompare(a.date))});}
   if(path!=='/record')return new Response(null,{status:404});
   const row=await request.json();if(!row.id||!row.date||!studentName(row.name))return new Response(null,{status:400});
