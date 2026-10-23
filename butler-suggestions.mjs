@@ -23,12 +23,6 @@ export async function handleButlerSuggestions(request,env) {
  const teacher=path.endsWith('/export');let hash;
  if(teacher){
   if(!env.TEACHER_SECRET||!token||await digest(token)!==await digest(env.TEACHER_SECRET))return reply({error:'Lehrkraft-Schlüssel ungültig.'},401);
- } else {
-  const normalized=token.replace(/[\s-]/g,'').toUpperCase();
-  if(!/^[A-Z2-9]{16}$/.test(normalized))return reply({error:'Bitte deinen Butler-Übungscode eingeben.'},401);
-  hash=await digest('butler-code-v1:'+normalized);
-  const allowed=(env.BUTLER_ACCESS_CODE_HASHES||'').split(',').map(s=>s.trim()).filter(Boolean);
-  if(!allowed.includes(hash))return reply({error:'Dieser Code ist für die Butler-Klasse nicht gültig.'},401);
  }
  if(!env.RESULTS)return reply({error:'Sammlung derzeit nicht erreichbar.'},503);
  try {
@@ -36,9 +30,10 @@ export async function handleButlerSuggestions(request,env) {
   if(teacher){const result=await store.fetch('https://results/butler-suggestions/list');if(!result.ok)throw Error('storage');return reply(await result.json());}
   if(!request.headers.get('Content-Type')?.includes('application/json'))return reply({error:'Ungültiges Datenformat.'},415);
   let body;try{body=await readBody(request);}catch{return reply({error:'Eingabe zu groß oder unlesbar.'},400);}
-  if(!body||typeof body.text!=='string'||!body.text.trim()||body.text.length>2000||controls.test(body.text)||typeof body.page!=='string'||!body.page.trim()||body.page.length>240||/[\r\n]/.test(body.page)||controls.test(body.page)||!uuid.test(body.attemptId||''))return reply({error:'Bitte 1 bis 2.000 Zeichen und einen gültigen Seitenbezug senden.'},400);
+  if(!body||typeof body.text!=='string'||!body.text.trim()||body.text.length>2000||controls.test(body.text)||typeof body.page!=='string'||!body.page.trim()||body.page.length>240||/[\r\n]/.test(body.page)||controls.test(body.page)||!uuid.test(body.attemptId||'')||!uuid.test(body.clientId||''))return reply({error:'Bitte 1 bis 2.000 Zeichen und einen gültigen Seitenbezug senden.'},400);
+  hash=await digest('butler-anonymous-v1:'+body.clientId);
   const result=await store.fetch('https://results/butler-suggestions/save',{method:'POST',body:JSON.stringify({id:body.attemptId,hash,text:body.text.trim(),page:body.page,date:new Date().toISOString()})});
-  if(result.status===429)return reply({error:'Fünf Vorschläge pro Code und Tag sind erreicht. Bitte morgen erneut versuchen (deutsche Zeit).'},429);
+  if(result.status===429)return reply({error:'Das tägliche Vorschlagslimit ist erreicht. Bitte morgen erneut versuchen (deutsche Zeit).'},429);
   if(result.status===409)return reply({error:'Diese Sende-ID gehört bereits zu einem anderen Text. Bitte einen neuen Vorschlag beginnen.'},409);
   if(!result.ok)throw Error('storage');
   return reply({saved:true,id:body.attemptId});
@@ -57,10 +52,12 @@ export async function butlerSuggestionStorage(request,state) {
   if(existing)return existing.text===row.text&&existing.page===row.page?200:409;
   const day=berlinDay(row.date),limitKey='limit:'+row.hash,prior=await tx.get(limitKey);
   const count=prior?.day===day?prior.count:0;
-  if(count>=5)return 429;
+  const daily=await tx.get('anonymous-day');
+  const dailyCount=daily?.day===day?daily.count:0;
+  if(count>=5||dailyCount>=200)return 429;
   const total=await tx.get('total')||0;if(total>=5000)return 507;
   await tx.put(key,{id:row.id,text:row.text,page:row.page,date:row.date});
-  await tx.put(limitKey,{day,count:count+1});await tx.put('total',total+1);
+  await tx.put(limitKey,{day,count:count+1});await tx.put('total',total+1);await tx.put('anonymous-day',{day,count:dailyCount+1});
   return 201;
  });
  return new Response(null,{status});
