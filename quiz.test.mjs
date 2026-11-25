@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {webcrypto} from 'node:crypto';globalThis.crypto??=webcrypto;
 import {questions} from './butler-quiz-data.mjs';import {gradeQuiz,handleButlerQuiz,butlerQuizStorage,csvRows} from './butler-quiz.mjs';
-const input=()=>({version:'butler-final-v1',attemptId:crypto.randomUUID(),name:'Quiz Test',answers:questions.map(q=>q.answer)});
+const input=()=>({version:'butler-final-quiz-v1',attemptId:crypto.randomUUID(),name:'Quiz Test',answers:questions.map(q=>q.answer)});
 function state(){const m=new Map();return {storage:{get:async k=>m.get(k),put:async(k,v)=>m.set(k,v),list:async({prefix})=>new Map([...m].filter(([k])=>k.startsWith(prefix))),getAlarm:async()=>null,setAlarm:async()=>{},transaction:async fn=>fn({get:async k=>m.get(k),put:async(k,v)=>m.set(k,v)})}};}
 test('20 questions, full, zero and mixed scores; no trusted client score',()=>{assert.equal(questions.length,20);const b=input();assert.equal(gradeQuiz({...b,score:0}).score,20);assert.equal(gradeQuiz({...b,answers:questions.map(q=>(q.answer+1)%q.options.length)}).score,0);b.answers[0]=(b.answers[0]+1)%4;assert.equal(gradeQuiz(b).score,19);});
 test('reject missing, malformed, oversized and invalid answers',()=>{const b=input();for(const patch of [{name:' '},{name:'x'.repeat(81)},{answers:[]},{answers:Array(20).fill(8)},{answers:Array(20).fill('1')},{attemptId:'fake'},{version:'other'}])assert.equal(gradeQuiz({...b,...patch}),null);});

@@ -1,7 +1,7 @@
 import {questions} from './butler-quiz-data.mjs';
 const TTL=90*86400000;
 export function gradeQuiz(body){
- if(!body||body.version!=='butler-final-v1'||typeof body.name!=='string'||typeof body.attemptId!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.attemptId))return null;
+ if(!body||body.version!=='butler-final-quiz-v1'||typeof body.name!=='string'||typeof body.attemptId!=='string'||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.attemptId))return null;
  const name=body.name.trim().replace(/\s+/gu,' ');
  if(name.length<2||name.length>80||/[\u0000-\u001f\u007f]/u.test(name)||!Array.isArray(body.answers)||body.answers.length!==questions.length||body.answers.some((a,i)=>!Number.isInteger(a)||a<0||a>=questions[i].options.length))return null;
  const feedback=questions.map((q,i)=>({id:q.id,correct:body.answers[i]===q.answer,answer:q.answer,explanation:q.explanation}));
