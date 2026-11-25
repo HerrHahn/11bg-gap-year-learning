@@ -1,3 +1,4 @@
+import {handleButlerQuiz} from './butler-quiz.mjs';
 import {handleGrundkursFeedback} from './grundkurs-feedback.mjs';
 import {handleButlerFeedback} from './butler-feedback.mjs';
 import {handleButlerSuggestions} from './butler-suggestions.mjs';
@@ -20,6 +21,7 @@ Give 1–3 specific strengths (or explicitly say no assessable strength), 2–3 
 
 async function limitedBody(req,max){const reader=req.body?.getReader();if(!reader)throw new Error('empty');let size=0;const chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>max){await reader.cancel();throw new Error('large');}chunks.push(value);}const result=new Uint8Array(size);let off=0;for(const chunk of chunks){result.set(chunk,off);off+=chunk.byteLength;}return new TextDecoder().decode(result);}
 export async function handle(request,env,fetcher=fetch){
+ if(new URL(request.url).pathname.startsWith('/butler/quiz/'))return handleButlerQuiz(request,env);
  if(new URL(request.url).pathname==='/butler-grundkurs/grade')return handleGrundkursFeedback(request,env,fetcher);
  if(new URL(request.url).pathname==='/butler/grade')return handleButlerFeedback(request,env,fetcher);
  if(['/butler/suggestions','/butler/suggestions/export'].includes(new URL(request.url).pathname))return handleButlerSuggestions(request,env);
@@ -79,3 +81,4 @@ export class Quota {
  }
  async alarm(){await this.state.storage.deleteAll();}
 }
+

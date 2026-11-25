@@ -1,3 +1,4 @@
+import {butlerQuizStorage} from './butler-quiz.mjs';
 import {butlerSuggestionStorage} from './butler-suggestions.mjs';
 import {suggestionStorage} from './suggestions.mjs';
 import {quizPoints} from './grading.js';
@@ -8,6 +9,7 @@ export function quizRecord(body,modules){const name=studentName(body.name);if(!n
 export class Results {
  constructor(state){this.state=state;}
  async fetch(request){const path=new URL(request.url).pathname;
+  if(path.startsWith('/butler-quiz/'))return butlerQuizStorage(request,this.state);
   if(path.startsWith('/butler-suggestions/'))return butlerSuggestionStorage(request,this.state);
   if(path.startsWith('/suggestions/'))return suggestionStorage(request,this.state);
   if(path==='/list'){const records=await this.state.storage.list({prefix:'result:'});return Response.json({rows:[...records.values()].filter(r=>Date.now()-Date.parse(r.date)<RETENTION_MS).sort((a,b)=>b.date.localeCompare(a.date))});}
@@ -18,3 +20,4 @@ export class Results {
  }
  async alarm(){const rows=await this.state.storage.list();const cutoff=Date.now()-RETENTION_MS;const keys=[...rows].filter(([k,v])=>k.startsWith('result:')?Date.parse(v.date)<cutoff:k.startsWith('count:')&&Date.parse(k.slice(6))<cutoff).map(([k])=>k);for(let i=0;i<keys.length;i+=100)await this.state.storage.delete(keys.slice(i,i+100));if(rows.size>keys.length)await this.state.storage.setAlarm(Date.now()+24*60*60*1000);}
 }
+
